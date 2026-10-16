@@ -7,3 +7,5 @@ numpy
 scikit-image
 scipy
 matplotlib
+google-generativeai
+python-dotenv

@@ -1,2 +1,33 @@
+# Secrets
 .env
-/venv
+
+# Virtual environment
+/venv/
+/env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Flask / uploads
+instance/
+uploads/
+*.log

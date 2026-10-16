@@ -244,6 +244,38 @@
     .dev-badge { display:inline-flex;align-items:center;gap:6px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--success);border-radius:99px;padding:4px 12px;font-size:.74rem;font-weight:600; }
     .dev-badge.cpu { background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--warn); }
 
+    /* Alert banner */
+    .alert-banner { display:none;align-items:center;gap:14px;background:rgba(248,113,113,.12);border:1.5px solid rgba(248,113,113,.5);border-radius:var(--radius);padding:16px 22px;margin-bottom:24px;flex-wrap:wrap; }
+    .alert-icon { font-size:1.6rem;flex-shrink:0; }
+    .alert-body strong { color:#fca5a5;font-size:.95rem;display:block;margin-bottom:3px; }
+    .alert-body p { color:#e2e8f0;font-size:.83rem;opacity:.85; }
+    .alert-pct { font-size:1.6rem;font-weight:800;color:#f87171;margin-left:auto;white-space:nowrap; }
+
+    /* AI Analysis card */
+    .ai-card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:28px; }
+    .ai-card-hdr { padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+    .ai-card-hdr h3 { font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px; }
+    .ai-badge { background:var(--grad2);color:#fff;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.04em; }
+    .btn-ai { padding:9px 20px;background:var(--grad2);border:none;border-radius:99px;color:#fff;font-size:.83rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .2s,transform .2s,box-shadow .2s;box-shadow:0 3px 14px rgba(124,91,239,.4);white-space:nowrap; }
+    .btn-ai:hover { transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,91,239,.6); }
+    .btn-ai:disabled { opacity:.45;cursor:not-allowed;transform:none; }
+    .ai-body { padding:24px 28px; }
+    .ai-placeholder { color:var(--muted);font-size:.88rem;text-align:center;padding:32px 0;display:flex;flex-direction:column;align-items:center;gap:10px; }
+    .ai-placeholder .ai-icon { font-size:2.5rem; }
+    .ai-loading { display:none;flex-direction:column;align-items:center;gap:14px;padding:40px 0; }
+    .ai-loading.on { display:flex; }
+    .ai-loading p { color:var(--muted);font-size:.85rem;animation:pulse 1.6s ease-in-out infinite; }
+    .ai-content { display:none;line-height:1.75;font-size:.9rem; }
+    .ai-content.on { display:block; }
+    .ai-content h2 { font-size:1rem;font-weight:700;margin:20px 0 8px;color:var(--accent); }
+    .ai-content h2:first-child { margin-top:0; }
+    .ai-content p { color:#c8d4e8;margin-bottom:10px; }
+    .ai-content strong { color:var(--text); }
+    .ai-content ul { padding-left:20px;color:#c8d4e8;margin-bottom:10px; }
+    .ai-content li { margin-bottom:4px; }
+    .ai-err { display:none;color:var(--danger);font-size:.85rem;padding:16px 0; }
+    .ai-err.on { display:block; }
+
     /* ── footer ── */
     footer { text-align:center;color:var(--muted);font-size:.76rem;padding:32px 0 0;border-top:1px solid var(--border);margin-top:48px; }
     footer a { color:var(--accent);text-decoration:none; }
@@ -371,6 +403,16 @@
       <div class="results" id="tl-results">
         <div class="results-title">Timeline Results</div>
 
+        <!-- Alert banner (shown when cumulative changed area > 40%) -->
+        <div class="alert-banner" id="tl-alert-banner">
+          <span class="alert-icon">&#x1F6A8;</span>
+          <div class="alert-body">
+            <strong>High Change Alert &mdash; Email Sent</strong>
+            <p>Cumulative changed area exceeded 40% of the monitored zone. An alert email has been dispatched.</p>
+          </div>
+          <span class="alert-pct"><span id="tl-alert-pct">--</span>%</span>
+        </div>
+
         <!-- Summary stats -->
         <div class="stats-grid" id="tl-stats"></div>
 
@@ -399,6 +441,29 @@
         <div class="hotspot-card">
           <div class="card-hdr">🔥 Cumulative Hotspot Map</div>
           <img id="tl-hotspot" src="" alt="Hotspot map" />
+        </div>
+
+        <!-- AI Analysis -->
+        <div class="ai-card" id="ai-card">
+          <div class="ai-card-hdr">
+            <h3>🤖 Gemini AI Analysis <span class="ai-badge">Vision</span></h3>
+            <button class="btn-ai" id="ai-btn" onclick="runGemini()" disabled>
+              ✨ Generate Deep Analysis
+            </button>
+          </div>
+          <div class="ai-body">
+            <div class="ai-placeholder" id="ai-placeholder">
+              <span class="ai-icon">🛰️</span>
+              <p>Run the timeline analysis first, then click <strong>Generate Deep Analysis</strong><br/>
+              to get a Gemini-powered interpretation of the changes detected.</p>
+            </div>
+            <div class="ai-loading" id="ai-loading">
+              <div class="spinner"></div>
+              <p>Gemini is analysing your images…</p>
+            </div>
+            <div class="ai-err" id="ai-err"></div>
+            <div class="ai-content" id="ai-content"></div>
+          </div>
         </div>
       </div>
     </div><!-- /timeline -->
@@ -600,8 +665,8 @@
     show('tl-loader'); document.getElementById('tl-btn').disabled = true;
 
     const fd = new FormData();
-    // Send in current strip order
-    const stripItems = Array.from(document.querySelectorAll('#tl-strip .thumb-item'));
+    // Backend sorts by YYYY_MM in filename — send in strip DOM order
+    const stripItems   = Array.from(document.querySelectorAll('#tl-strip .thumb-item'));
     const orderedFiles = stripItems.map(it => tlFiles[parseInt(it.dataset.idx)]);
 
     orderedFiles.forEach((f, i) => {
@@ -641,6 +706,28 @@
 
     // Hotspot
     document.getElementById('tl-hotspot').src = 'data:image/png;base64,' + d.hotspot;
+
+    // Alert banner
+    const alertEl = document.getElementById('tl-alert-banner');
+    if (d.alert && d.alert.triggered) {
+      document.getElementById('tl-alert-pct').textContent = d.alert.cumulative_pct.toFixed(1);
+      alertEl.style.display = 'flex';
+    } else {
+      alertEl.style.display = 'none';
+    }
+
+    // Prime the Gemini payload (first img, last img, hotspot, stats)
+    _geminiPayload = {
+      first_img: d.thumbs[0],
+      last_img:  d.thumbs[d.thumbs.length - 1],
+      hotspot:   d.hotspot,
+      stats:     d.stats,
+    };
+    document.getElementById('ai-btn').disabled = false;
+    document.getElementById('ai-content').classList.remove('on');
+    document.getElementById('ai-err').classList.remove('on');
+    document.getElementById('ai-loading').classList.remove('on');
+    document.getElementById('ai-placeholder').style.display = 'flex';
 
     showResults('tl-results');
     document.getElementById('tl-results').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -775,6 +862,55 @@
     document.getElementById('car-count').textContent = `${carIdx+1} / ${carTotal}`;
     document.getElementById('car-prev').disabled = carIdx === 0;
     document.getElementById('car-next').disabled = carIdx === carTotal - 1;
+  }
+
+  // ══════════════════════════════════════════════
+  //  GEMINI AI ANALYSIS
+  // ══════════════════════════════════════════════
+  let _geminiPayload = null;   // filled after timeline completes
+
+  async function runGemini() {
+    if (!_geminiPayload) return;
+    const btn = document.getElementById('ai-btn');
+    btn.disabled = true;
+    document.getElementById('ai-placeholder').style.display = 'none';
+    document.getElementById('ai-err').classList.remove('on');
+    document.getElementById('ai-content').classList.remove('on');
+    document.getElementById('ai-loading').classList.add('on');
+
+    try {
+      const res  = await fetch('/gemini-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_geminiPayload),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const content = document.getElementById('ai-content');
+      content.innerHTML = mdToHtml(data.analysis);
+      content.classList.add('on');
+    } catch(e) {
+      const errEl = document.getElementById('ai-err');
+      errEl.textContent = '⚠️ ' + (e.message || 'Unknown error');
+      errEl.classList.add('on');
+    } finally {
+      document.getElementById('ai-loading').classList.remove('on');
+      btn.disabled = false;
+    }
+  }
+
+  // Minimal markdown → HTML (bold, headings, bullets)
+  function mdToHtml(md) {
+    return md
+      .replace(/^#{1,2}\s+(.+)$/gm, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+      .replace(/\n{2,}/g, '</p><p>')
+      .replace(/^(?!<[hul])/gm, '')
+      .replace(/^(.+[^>])$/gm, (l) => l.startsWith('<') ? l : '<p>' + l + '</p>')
+      .replace(/<p><\/p>/g, '');
   }
 
   // ══════════════════════════════════════════════
