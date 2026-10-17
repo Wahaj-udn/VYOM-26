@@ -1,4 +1,9 @@
-# ChangeScope — AI-Powered Satellite Image Change Detection
+# ChangeScope : AI-Powered Satellite Image Change Detection
+
+
+We propose an AI-powered edge-based satellite change-screening system that locally processes SpaceNet imagery on Arduino UNO Q, detects changes using heatmaps and overlays, and generates area-wise reports over time. Significant anomalies trigger email alerts with inspection reports, while local AI processing ensures privacy, security, and low latency.
+
+<img width="750" height="411" alt="image" src="https://github.com/user-attachments/assets/6f2eb5c1-37b4-4c7d-bc5c-fc22c63d91b5" />
 
 ChangeScope is a Python-based application for comparing satellite or other Earth-observation images captured at different times. It helps users inspect visual differences, review change maps and timeline results, and turn technical detection output into understandable analysis.
 
